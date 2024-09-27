@@ -1,3 +1,4 @@
+from operator import contains
 import os
 from typing import Union, List, Optional
 
@@ -79,7 +80,19 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
 
     s = s_[:]  #  Don't modify the original input string
     
-    # first validate the brackets
+    # make sure any dot operators happen AFTER a lambda expression
+    dot_op = False
+    for char in s[::-1]:  # iter from right --> left
+        if char == '.':
+            dot_op = True
+        if char == '\\':
+            dot_op = False
+    if dot_op == True:
+        return False
+            
+    
+    s = convert_dot_to_brackets(s_) 
+    
     if valid_brackets(s_) == False:
         return False
     
@@ -91,14 +104,77 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
         if not is_valid_var_name(potential_var):
             return False
         
-    # then make sure
+    # make sure lambda expressions are valid
+    if not valid_lambda_expr(s_):
+        return False
+    
+    # now that none of the rules are broken, we can begin
+    # to parse the actual string into the tokens
+    return parse(s)
     
 
+#   ======================
+#   BEGIN CUSTOM FUNCTIONS
+#   ======================
 
-def valid_lambda_expr(s_) -> bool:
+
+def parse(s) -> list[str]:
+    """ 
+    converts the string itself into the list of tokens
+    """
+    tokens = []
+    variable = ""
+    for char in s:
+        if char in ['(', ')', '.', '\\']:
+            tokens.append(char)
+        if char in alphabet_chars
     
     
-def valid_brackets(s_: str) -> bool:    
+    tokens
+
+
+def convert_dot_to_brackets(s: str) -> str:
+    """ 
+    checks to see if there are any dot operators,
+    if there are, it converts it to the equivalent expression
+    with brackets
+    """
+    s = s[::-1]
+    
+    modified_string = ""
+    
+    for char in s:
+        if char == '.':
+            modified_string = ''.join((')', modified_string))
+            modified_string += '( '
+        else:
+            modified_string += char
+    
+    modified_string = modified_string[::-1]
+    
+    return modified_string
+
+
+def valid_lambda_expr(s) -> bool:
+    """ 
+    given the string s, determines if any lambda expressions in it are valid
+    """
+    in_lambda_expr = False
+    for idx, char in enumerate(s_):
+        if char == '\\':
+            in_lambda_expr = True
+        
+        if char == ' ':
+            # make sure there's something else after the space
+            if alphabet_chars.contains(s_[idx+1]):
+                in_lambda_expr = False
+            
+        
+        
+    return in_lambda_expr == False
+
+    
+def valid_brackets(s: str) -> bool:    
     """
     returns true if the string has valid bracket syntax
     :param s_: the input string
@@ -111,6 +187,11 @@ def valid_brackets(s_: str) -> bool:
             bracket_count -= 1 
 
     return bracket_count == 0
+
+
+#   ====================
+#   END CUSTOM FUNCTIONS
+#   ====================
 
 def read_lines_from_txt_check_validity(fp: [str, os.PathLike]) -> None:
     """
@@ -187,19 +268,25 @@ def build_parse_tree(tokens: List[str]) -> ParseTree:
 
 
 if __name__ == "__main__":
+
+    examples = ["\\x. x y z", "\\x. \\x. x y z"]
+    for x in examples:
+        print(convert_dot_to_brackets(x))
+
+
     print("\n\nChecking valid examples...")
-    read_lines_from_txt_check_validity(valid_examples_fp)
-    read_lines_from_txt_output_parse_tree(valid_examples_fp)
+#     read_lines_from_txt_check_validity(valid_examples_fp)
+#     read_lines_from_txt_output_parse_tree(valid_examples_fp)
 
-    print("Checking invalid examples...")
-    read_lines_from_txt_check_validity(invalid_examples_fp)
+#     print("Checking invalid examples...")
+#     read_lines_from_txt_check_validity(invalid_examples_fp)
 
-    # Optional
-    print("\n\nAssociation Examples:")
-    sample = ["a", "b", "c"]
-    print("Right association")
-    associated_sample_r = add_associativity(sample, association_type="right")
-    print(associated_sample_r)
-    print("Left association")
-    associated_sample_l = add_associativity(sample, association_type="left")
-    print(associated_sample_l)
+#     # Optional
+#     print("\n\nAssociation Examples:")
+#     sample = ["a", "b", "c"]
+#     print("Right association")
+#     associated_sample_r = add_associativity(sample, association_type="right")
+#     print(associated_sample_r)
+#     print("Left association")
+#     associated_sample_l = add_associativity(sample, association_type="left")
+#     print(associated_sample_l)
