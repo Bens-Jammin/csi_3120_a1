@@ -88,12 +88,14 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
         if char == '\\':
             dot_op = False
     if dot_op == True:
+        print("[DEBUG] dot operation is wrong in '{}'".format(s))
         return False
             
     
     s = convert_dot_to_brackets(s_) 
     
     if valid_brackets(s_) == False:
+        print("[DEBUG] brackets are wrong in '{}'".format(s))
         return False
     
     # next make sure any variables are valid
@@ -102,12 +104,15 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
             continue
         
         if not is_valid_var_name(potential_var):
+            print("[DEBUG] variable names are wrong in '{}'".format(s))
             return False
         
     # make sure lambda expressions are valid
     if not valid_lambda_expr(s_):
+        print("[DEBUG] lambda expressions are wrong in '{}'".format(s))
         return False
     
+    print("[DEBUG] '{}' is valid expr".format(s))
     # now that none of the rules are broken, we can begin
     # to parse the actual string into the tokens
     return parse(s)
@@ -127,10 +132,13 @@ def parse(s) -> list[str]:
     for char in s:
         if char in ['(', ')', '.', '\\']:
             tokens.append(char)
-        if char in alphabet_chars
+        if char in alphabet_chars:
+            variable += char
+        if char == ' ' and len(variable) != 0:
+            tokens.append(variable)
+            variable = ""
     
-    
-    tokens
+    return tokens
 
 
 def convert_dot_to_brackets(s: str) -> str:
@@ -160,13 +168,13 @@ def valid_lambda_expr(s) -> bool:
     given the string s, determines if any lambda expressions in it are valid
     """
     in_lambda_expr = False
-    for idx, char in enumerate(s_):
+    for idx, char in enumerate(s):
         if char == '\\':
             in_lambda_expr = True
         
         if char == ' ':
             # make sure there's something else after the space
-            if alphabet_chars.contains(s_[idx+1]):
+            if alphabet_chars.contains(s[idx+1]):
                 in_lambda_expr = False
             
         
@@ -180,7 +188,7 @@ def valid_brackets(s: str) -> bool:
     :param s_: the input string
     """
     bracket_count = 0
-    for char in s_:
+    for char in s:
         if char == '(':
             bracket_count += 1
         if char == ')':
@@ -269,9 +277,15 @@ def build_parse_tree(tokens: List[str]) -> ParseTree:
 
 if __name__ == "__main__":
 
-    examples = ["\\x. x y z", "\\x. \\x. x y z"]
+    examples = [
+        "\\x. x y z", 
+        "\\x. \\x. x y z",
+        "(A B)",
+        "abc",
+        "a (b c)"
+    ]
     for x in examples:
-        print(convert_dot_to_brackets(x))
+        print(parse_tokens(x))
 
 
     print("\n\nChecking valid examples...")
