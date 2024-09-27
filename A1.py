@@ -1,8 +1,6 @@
 import os
 from typing import Union, List, Optional
 
-from click import File
-
 alphabet_chars = list("abcdefghijklmnopqrstuvwxyz") + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 numeric_chars = list("0123456789")
 var_chars = alphabet_chars + numeric_chars
@@ -22,7 +20,7 @@ def read_lines_from_txt(fp: [str, os.PathLike]) -> List[str]:
         lines = [line.rstrip() for line in file]
         file.close()
     
-    return lines 
+    return 
 
 
 def is_valid_var_name(s: str) -> bool:
@@ -80,10 +78,39 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
     """
 
     s = s_[:]  #  Don't modify the original input string
-    # TODO
+    
+    # first validate the brackets
+    if valid_brackets(s_) == False:
+        return False
+    
+    # next make sure any variables are valid
+    for potential_var in s_.split(' '):
+        if potential_var in ['(', ')', '.', '\\']:
+            continue
+        
+        if not is_valid_var_name(potential_var):
+            return False
+        
+    # then make sure
+    
 
-    return []
 
+def valid_lambda_expr(s_) -> bool:
+    
+    
+def valid_brackets(s_: str) -> bool:    
+    """
+    returns true if the string has valid bracket syntax
+    :param s_: the input string
+    """
+    bracket_count = 0
+    for char in s_:
+        if char == '(':
+            bracket_count += 1
+        if char == ')':
+            bracket_count -= 1 
+
+    return bracket_count == 0
 
 def read_lines_from_txt_check_validity(fp: [str, os.PathLike]) -> None:
     """
@@ -160,7 +187,6 @@ def build_parse_tree(tokens: List[str]) -> ParseTree:
 
 
 if __name__ == "__main__":
-
     print("\n\nChecking valid examples...")
     read_lines_from_txt_check_validity(valid_examples_fp)
     read_lines_from_txt_output_parse_tree(valid_examples_fp)
