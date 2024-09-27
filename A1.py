@@ -1,8 +1,6 @@
 import os
 from typing import Union, List, Optional
 
-from click import File
-
 alphabet_chars = list("abcdefghijklmnopqrstuvwxyz") + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 numeric_chars = list("0123456789")
 var_chars = alphabet_chars + numeric_chars
@@ -24,7 +22,6 @@ def read_lines_from_txt(fp: [str, os.PathLike]) -> List[str]:
     
     return lines 
 
-
 def is_valid_var_name(s: str) -> bool:
     """
     :param s: Candidate input variable name
@@ -32,7 +29,12 @@ def is_valid_var_name(s: str) -> bool:
     and contains only characters and digits. Returns False otherwise.
     """
     # TODO
+
+    if s[0] in alphabet_chars and all(char in var_chars for char in s): 
+        return True
+
     return False
+
 
 
 class Node:
