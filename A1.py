@@ -197,8 +197,8 @@ def valid_brackets(s: str) -> bool:
             bracket_count += 1
         if char == ')':
             bracket_count -= 1
-            if bracket_count == -1
-            return False 
+            if bracket_count == -1:
+                return False 
 
     return bracket_count == 0
 
@@ -224,8 +224,6 @@ def read_lines_from_txt_check_validity(fp: [str, os.PathLike]) -> None:
             print(f"The tokenized string for input string {l} is {'_'.join(tokens)}")
     if len(valid_lines) == len(lines):
         print(f"All lines are valid")
-
-
 
 def read_lines_from_txt_output_parse_tree(fp: [str, os.PathLike]) -> None:
     """
@@ -261,6 +259,17 @@ def add_associativity(s_: List[str], association_type: str = "left") -> List[str
 
 def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node:
     """
+
+    Example Input: ["\", "x", "(", "x", "za", ")"]
+    Expected output: 
+    ----\
+    ----x
+    ----(_x_za_)
+    --------(
+    --------x_za
+    ------------x
+    ------------za
+    --------)
     An inner recursive inner function to build a parse tree
     :param tokens: A list of token strings
     :param node: A Node object
@@ -268,7 +277,43 @@ def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node
     """
 
     #TODO
+    if node is None: 
+        node = Node()
+
+    while tokens: # Not sure about this while loop yet
+        token = tokens.pop(0)
+
+        if token == "\\": # we have '\' <var> <expr>
+            backSlashNode = Node([token])
+            node.add_child_node(backSlashNode) # '\' into a child node.
+            varNode = Node([tokens.pop(0)])
+            node.add_child_node(varNode) # <var> into a child node
+            exprNode = Node([tokens])
+            node.add_child_node(exprNode) # <expr> into a child node
+            build_parse_tree_rec(tokens, exprNode) # recusively calling our tree builder on the <expr> child node
+
+
+        elif token == "(": 
+            openBracketNode = Node(["("])
+            node.add_child_node(openBracketNode)
+
+            subExprNode = Node(tokens)
+            node.add_child_node(subExprNode)
+
+            closedBracketNode = Node([")"])
+            node.add_child_node(closedBracketNode)
+
+            build_parse_tree_rec(tokens, subExprNode)
+
+        elif token == ")":
+            return node # Terminate and retrun the evaluation of the sub expression
+
+        else: 
+            node.add_child_node(Node[token]) # <var> into child node
+
+
     return Node()
+
 
 
 def build_parse_tree(tokens: List[str]) -> ParseTree:
@@ -295,7 +340,7 @@ if __name__ == "__main__":
 
 
     print("\n\nChecking valid examples...")
-#     read_lines_from_txt_check_validity(valid_examples_fp)
+# read_lines_from_txt_check_validity(valid_examples_fp)
 #     read_lines_from_txt_output_parse_tree(valid_examples_fp)
 
 #     print("Checking invalid examples...")
