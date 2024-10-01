@@ -196,7 +196,9 @@ def valid_brackets(s: str) -> bool:
         if char == '(':
             bracket_count += 1
         if char == ')':
-            bracket_count -= 1 
+            bracket_count -= 1
+            if bracket_count == -1
+            return False 
 
     return bracket_count == 0
 

@@ -1,5 +1,5 @@
-(A B)
-abc
+a \x(x b)
+a b
 a b c
 a (b c)
 \x.\y.x y
@@ -17,3 +17,7 @@ a (b c)
 \x((a) (b))
 \x (a)
 \x. a b
+(a) (b) (\x(x b)) (\x(x yz))
+(a b)
+(a) (b)
+(a) (b) (c) (d)
