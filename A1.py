@@ -21,7 +21,7 @@ def read_lines_from_txt(fp: [str, os.PathLike]) -> List[str]:
         lines = [line.rstrip() for line in file]
         file.close()
     
-    return 
+    return lines
 
 def is_valid_var_name(s: str) -> bool:
     """
@@ -64,7 +64,7 @@ class ParseTree:
         self.root = root
 
     def print_tree(self, node: Optional[Node] = None, level: int = 0) -> None: #Using preorder traversal
-        # TODO
+        # TODO COMPLETE
 
         if node is None: 
             node = self.root
@@ -187,7 +187,7 @@ def valid_lambda_expr(s) -> bool:
         
         if char == ' ':
             # make sure there's something else after the space
-            if alphabet_chars.contains(s[idx+1]):
+            if s[idx+1] in alphabet_chars:
                 in_lambda_expr = False
             
         
@@ -369,30 +369,30 @@ if __name__ == "__main__":
 #   ===========================
 
 
-    # examples = [
-    #     "\\x. x y z", 
-    #     "\\x. \\x. x y z",
-    #     "(A B)",
-    #     "abc",
-    #     "a (b c)"
-    # ]
-    # for x in examples:
-    #     print(parse_tokens(x))
+    examples = [
+        "\\x. x y z", 
+        "\\x. \\x. x y z",
+        "(A B)",
+        "abc",
+        "a (b c)"
+    ]
+    for x in examples:
+        print(parse_tokens(x))
 
 
-    # print("\n\nChecking valid examples...")
-    # read_lines_from_txt_check_validity(valid_examples_fp)
-    # read_lines_from_txt_output_parse_tree(valid_examples_fp)
+    print("\n\nChecking valid examples...")
+    read_lines_from_txt_check_validity(valid_examples_fp)
+    read_lines_from_txt_output_parse_tree(valid_examples_fp)
 
-#     print("Checking invalid examples...")
-#     read_lines_from_txt_check_validity(invalid_examples_fp)
+    print("Checking invalid examples...")
+    read_lines_from_txt_check_validity(invalid_examples_fp)
 
-#     # Optional
-#     print("\n\nAssociation Examples:")
-#     sample = ["a", "b", "c"]
-#     print("Right association")
-#     associated_sample_r = add_associativity(sample, association_type="right")
-#     print(associated_sample_r)
-#     print("Left association")
-#     associated_sample_l = add_associativity(sample, association_type="left")
-#     print(associated_sample_l)
+    # # Optional
+    # print("\n\nAssociation Examples:")
+    # sample = ["a", "b", "c"]
+    # print("Right association")
+    # associated_sample_r = add_associativity(sample, association_type="right")
+    # print(associated_sample_r)
+    # print("Left association")
+    # associated_sample_l = add_associativity(sample, association_type="left")
+    # print(associated_sample_l)
