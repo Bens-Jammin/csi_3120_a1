@@ -10,7 +10,7 @@ valid_examples_fp = "./valid_examples.txt"
 invalid_examples_fp = "./invalid_examples.txt"
 
 
-def read_lines_from_txt(fp: [str, os.PathLike]) -> List[str]:
+def read_lines_from_txt(fp: list[str, os.PathLike]) -> List[str]:
     """
     :param fp: File path of the .txt file.
     :return: The lines of the file path removing trailing whitespaces
@@ -29,12 +29,15 @@ def is_valid_var_name(s: str) -> bool:
     :return: True if the variable name starts with a character,
     and contains only characters and digits. Returns False otherwise.
     """
-    # TODO
 
-    if s[0] in alphabet_chars and all(char in var_chars for char in s): 
-        return True
+    if not alphabet_chars.__contains__(s[0]):
+        return False
+    
+    for char in s:
+        if not var_chars.__contains__(char):
+            return False
 
-    return False
+    return True
 
 
 
@@ -101,31 +104,26 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
         if char == '\\':
             dot_op = False
     if dot_op == True:
-        print("[DEBUG] dot operation is wrong in '{}'".format(s))
         return False
             
     
     s = convert_dot_to_brackets(s_) 
     
     if valid_brackets(s_) == False:
-        print("[DEBUG] brackets are wrong in '{}'".format(s))
         return False
     
     # next make sure any variables are valid
     for potential_var in s_.split(' '):
-        if potential_var in ['(', ')', '.', '\\']:
+        if ("(" in potential_var) or (")" in potential_var) or ("." in potential_var) or ("\\" in potential_var):
             continue
         
         if not is_valid_var_name(potential_var):
-            print("[DEBUG] variable names are wrong in '{}'".format(s))
             return False
         
     # make sure lambda expressions are valid
     if not valid_lambda_expr(s_):
-        print("[DEBUG] lambda expressions are wrong in '{}'".format(s))
         return False
     
-    print("[DEBUG] '{}' is valid expr".format(s))
     # now that none of the rules are broken, we can begin
     # to parse the actual string into the tokens
     return parse(s)
@@ -187,7 +185,8 @@ def valid_lambda_expr(s) -> bool:
         
         if char == ' ':
             # make sure there's something else after the space
-            if s[idx+1] in alphabet_chars:
+
+            if alphabet_chars.__contains__(s[idx+1]):
                 in_lambda_expr = False
             
         
@@ -206,8 +205,11 @@ def valid_brackets(s: str) -> bool:
             bracket_count += 1
         if char == ')':
             bracket_count -= 1
-            if bracket_count == -1:
-                return False 
+        
+        # bracket count can only be negative if a close bracket
+        # appears before an opening
+        if bracket_count < 0:
+            return False
 
     return bracket_count == 0
 
@@ -290,16 +292,6 @@ def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node
     while tokens:
         token = tokens.pop(0)
 
-        # if token == "\\": # we have '\' <var> <expr> ...
-        #     backSlashNode = Node([token])
-        #     node.add_child_node(backSlashNode) # '\' into a child node.
-        #     varNode = Node([tokens.pop(0)])
-        #     node.add_child_node(varNode) # <var> into a child node
-        #     exprNode = Node(tokens[:])
-        #     node.add_child_node(exprNode) # <expr> into a child node
-        #     build_parse_tree_rec(tokens, exprNode) # recusively calling our tree builder on the <expr> child node
-
-
         if token == "(": 
 
             closingBracketIndex = findClosingBracket(tokens)
@@ -374,10 +366,13 @@ if __name__ == "__main__":
         "\\x. \\x. x y z",
         "(A B)",
         "abc",
-        "a (b c)"
+        "a (b c)",
+        ") wxyz (",
+        "1x",
+        "_var"
     ]
     for x in examples:
-        print(parse_tokens(x))
+        parse_tokens(x)
 
 
     print("\n\nChecking valid examples...")
