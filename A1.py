@@ -63,9 +63,18 @@ class ParseTree:
     def __init__(self, root):
         self.root = root
 
-    def print_tree(self, node: Optional[Node] = None, level: int = 0) -> None:
+    def print_tree(self, node: Optional[Node] = None, level: int = 0) -> None: #Using preorder traversal
         # TODO
-        print("")
+
+        if node is None: 
+            node = self.root
+
+        level += 1
+        indent = "----"*level
+
+        for child in node.children: 
+            print(indent + '_'.join(child.elem))
+            self.print_tree(child, level)
 
 
 
@@ -260,7 +269,7 @@ def add_associativity(s_: List[str], association_type: str = "left") -> List[str
 def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node:
     """
 
-    Example Input: ["\", "x", "(", "x", "za", ")"]
+    Example Input: ["\\", "x", "(", "x", "za", ")"]
     Expected output: 
     ----\
     ----x
@@ -275,12 +284,11 @@ def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node
     :param node: A Node object
     :return: a node with children whose tokens are variables, parenthesis, slashes, or the inner part of an expression
     """
-
-    #TODO
+    print(tokens)
     if node is None: 
-        node = Node()
+        node = Node(tokens[:]) # Create root node
 
-    while tokens: # Not sure about this while loop yet
+    while tokens:
         token = tokens.pop(0)
 
         if token == "\\": # we have '\' <var> <expr>
@@ -288,7 +296,7 @@ def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node
             node.add_child_node(backSlashNode) # '\' into a child node.
             varNode = Node([tokens.pop(0)])
             node.add_child_node(varNode) # <var> into a child node
-            exprNode = Node([tokens])
+            exprNode = Node(tokens[:])
             node.add_child_node(exprNode) # <expr> into a child node
             build_parse_tree_rec(tokens, exprNode) # recusively calling our tree builder on the <expr> child node
 
@@ -297,24 +305,38 @@ def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node
             openBracketNode = Node(["("])
             node.add_child_node(openBracketNode)
 
-            subExprNode = Node(tokens)
+            subExprNode = Node(tokens[:findClosingBracket(tokens)])
             node.add_child_node(subExprNode)
 
             closedBracketNode = Node([")"])
             node.add_child_node(closedBracketNode)
 
-            build_parse_tree_rec(tokens, subExprNode)
+            build_parse_tree_rec(tokens[:findClosingBracket(tokens)], subExprNode) #Evaluates expr in <'('expr')'>
+
 
         elif token == ")":
             return node # Terminate and retrun the evaluation of the sub expression
 
         else: 
-            node.add_child_node(Node[token]) # <var> into child node
+            node.add_child_node(Node([token])) # <var> into child node
 
 
-    return Node()
+    return node
 
+def findClosingBracket(tokens: List[str]) -> int:
 
+    stack = ["("] # THIS IS IMPORTANT: since the first "(" will be popped when we call this function
+
+    for index, token in enumerate(tokens):
+        if token == "(": 
+            stack.append(index)
+
+        elif token == ")": 
+            if stack:
+                stack.pop()
+                if not stack: # If stack is now empty, we've found corresponding closed bracket
+                    return index
+    return -1 # Closing bracket does not exist
 
 def build_parse_tree(tokens: List[str]) -> ParseTree:
     """
@@ -328,20 +350,34 @@ def build_parse_tree(tokens: List[str]) -> ParseTree:
 
 if __name__ == "__main__":
 
-    examples = [
-        "\\x. x y z", 
-        "\\x. \\x. x y z",
-        "(A B)",
-        "abc",
-        "a (b c)"
-    ]
-    for x in examples:
-        print(parse_tokens(x))
+#   ===========================
+#   BEGIN TESTING OF PARSE TREE
+#   ===========================
+    
+    testTokens1 = ["\\", "x", "(", "x", "za", ")"]
+    testTokens2 = "(_a_)_(_b_)_(_c_)_(_d_)".split("_")
+    parseTree = build_parse_tree(testTokens1)
+    parseTree.print_tree()
+
+#   ===========================
+#   END TESTING OF PARSE TREE
+#   ===========================
 
 
-    print("\n\nChecking valid examples...")
-# read_lines_from_txt_check_validity(valid_examples_fp)
-#     read_lines_from_txt_output_parse_tree(valid_examples_fp)
+    # examples = [
+    #     "\\x. x y z", 
+    #     "\\x. \\x. x y z",
+    #     "(A B)",
+    #     "abc",
+    #     "a (b c)"
+    # ]
+    # for x in examples:
+    #     print(parse_tokens(x))
+
+
+    # print("\n\nChecking valid examples...")
+    # read_lines_from_txt_check_validity(valid_examples_fp)
+    # read_lines_from_txt_output_parse_tree(valid_examples_fp)
 
 #     print("Checking invalid examples...")
 #     read_lines_from_txt_check_validity(invalid_examples_fp)
