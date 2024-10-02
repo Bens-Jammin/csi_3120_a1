@@ -69,11 +69,11 @@ class ParseTree:
         if node is None: 
             node = self.root
 
-        level += 1
         indent = "----"*level
+        print(indent + '_'.join(node.elem))
 
+        level += 1
         for child in node.children: 
-            print(indent + '_'.join(child.elem))
             self.print_tree(child, level)
 
 
@@ -284,48 +284,52 @@ def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node
     :param node: A Node object
     :return: a node with children whose tokens are variables, parenthesis, slashes, or the inner part of an expression
     """
-    print(tokens)
     if node is None: 
         node = Node(tokens[:]) # Create root node
 
     while tokens:
         token = tokens.pop(0)
 
-        if token == "\\": # we have '\' <var> <expr>
-            backSlashNode = Node([token])
-            node.add_child_node(backSlashNode) # '\' into a child node.
-            varNode = Node([tokens.pop(0)])
-            node.add_child_node(varNode) # <var> into a child node
-            exprNode = Node(tokens[:])
-            node.add_child_node(exprNode) # <expr> into a child node
-            build_parse_tree_rec(tokens, exprNode) # recusively calling our tree builder on the <expr> child node
+        # if token == "\\": # we have '\' <var> <expr> ...
+        #     backSlashNode = Node([token])
+        #     node.add_child_node(backSlashNode) # '\' into a child node.
+        #     varNode = Node([tokens.pop(0)])
+        #     node.add_child_node(varNode) # <var> into a child node
+        #     exprNode = Node(tokens[:])
+        #     node.add_child_node(exprNode) # <expr> into a child node
+        #     build_parse_tree_rec(tokens, exprNode) # recusively calling our tree builder on the <expr> child node
 
 
-        elif token == "(": 
-            openBracketNode = Node(["("])
-            node.add_child_node(openBracketNode)
+        if token == "(": 
 
-            subExprNode = Node(tokens[:findClosingBracket(tokens)])
-            node.add_child_node(subExprNode)
+            closingBracketIndex = findClosingBracket(tokens)
 
-            closedBracketNode = Node([")"])
-            node.add_child_node(closedBracketNode)
+            exprString = ["("] + tokens[:closingBracketIndex + 1] # getting '(' <expr> ')'
 
-            build_parse_tree_rec(tokens[:findClosingBracket(tokens)], subExprNode) #Evaluates expr in <'('expr')'>
+            exprNode = Node(exprString)
+            node.add_child_node(exprNode)
 
+            exprNode.add_child_node(Node(["("]))
 
-        elif token == ")":
-            return node # Terminate and retrun the evaluation of the sub expression
+            subExprNode = Node(exprString[1:-1])
+            exprNode.add_child_node(subExprNode)
+
+            exprNode.add_child_node(Node([")"]))
+
+            if not len(subExprNode.elem) == 1: # if the subExpr node contains <expr> that is just 1 <var> we don't continue to explore it (not actually needed to work)
+                build_parse_tree_rec(tokens[:closingBracketIndex], subExprNode) #Evaluates expr in '('<expr>')'
+
+            tokens = tokens[closingBracketIndex + 1:] # removing all the suff we already parsed  in the above call from what is left to parse
 
         else: 
-            node.add_child_node(Node([token])) # <var> into child node
+            node.add_child_node(Node([token])) # '\' or <var> into child node
 
 
     return node
 
 def findClosingBracket(tokens: List[str]) -> int:
 
-    stack = ["("] # THIS IS IMPORTANT: since the first "(" will be popped when we call this function
+    stack = ["("] # THIS IS IMPORTANT: since the first "(" will have been popped when we call this function
 
     for index, token in enumerate(tokens):
         if token == "(": 
@@ -354,10 +358,11 @@ if __name__ == "__main__":
 #   BEGIN TESTING OF PARSE TREE
 #   ===========================
     
-    testTokens1 = ["\\", "x", "(", "x", "za", ")"]
-    testTokens2 = "(_a_)_(_b_)_(_c_)_(_d_)".split("_")
-    parseTree = build_parse_tree(testTokens1)
-    parseTree.print_tree()
+    # testTokens1 = ["\\", "x", "(", "x", "za", ")"]
+    # testTokens2 = "(_a_)_(_b_)_(_c_)_(_d_)".split("_")
+    # testTokens3 = ['(', 'a', ')', '(', 'b', ')', '(', '\\', 'x', '(', 'x', 'b', ')', ')', '(', '\\', 'x', '(', 'x', 'yz', ')', ')']
+    # parseTree = build_parse_tree(testTokens3)
+    # parseTree.print_tree()
 
 #   ===========================
 #   END TESTING OF PARSE TREE
