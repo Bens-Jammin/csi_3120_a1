@@ -112,8 +112,11 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
     if valid_brackets(s_) == False:
         return False
     
+    
+    s = s.replace("_", " ")
+    
     # next make sure any variables are valid
-    for potential_var in s_.split(' '):
+    for potential_var in s.split(' '):
         if ("(" in potential_var) or (")" in potential_var) or ("." in potential_var) or ("\\" in potential_var):
             continue
         
@@ -361,26 +364,14 @@ if __name__ == "__main__":
 #   ===========================
 
 
-    examples = [
-        "\\x. x y z", 
-        "\\x. \\x. x y z",
-        "(A B)",
-        "abc",
-        "a (b c)",
-        ") wxyz (",
-        "1x",
-        "_var"
-    ]
-    for x in examples:
-        parse_tokens(x)
+    print(parse_tokens("(_a_)_(_b_)_(_c_)_(_d_)"))
 
+    # print("\n\nChecking valid examples...")
+    # read_lines_from_txt_check_validity(valid_examples_fp)
+    # read_lines_from_txt_output_parse_tree(valid_examples_fp)
 
-    print("\n\nChecking valid examples...")
-    read_lines_from_txt_check_validity(valid_examples_fp)
-    read_lines_from_txt_output_parse_tree(valid_examples_fp)
-
-    print("Checking invalid examples...")
-    read_lines_from_txt_check_validity(invalid_examples_fp)
+    # print("Checking invalid examples...")
+    # read_lines_from_txt_check_validity(invalid_examples_fp)
 
     # # Optional
     # print("\n\nAssociation Examples:")
