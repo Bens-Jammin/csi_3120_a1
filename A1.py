@@ -114,12 +114,19 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
     
     
     s = s.replace("_", " ")
+    s = s.replace("  ", " ")
+    s = add_correct_spacing(s=s)
     
+    temp = s.split(" ")
     # next make sure any variables are valid
     for potential_var in s.split(' '):
         if ("(" in potential_var) or (")" in potential_var) or ("." in potential_var) or ("\\" in potential_var):
             continue
-        
+       
+        # sometimes if you split between two spaces, it adds an empty string into the split
+        if potential_var == "":
+            continue
+            
         if not is_valid_var_name(potential_var):
             return False
         
@@ -137,6 +144,29 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
 #   ======================
 
 
+
+def add_correct_spacing(s: str) -> str:
+    """
+    the parse_str function doesnt work for examples such as:
+    a \\x(x b)
+    because it parses "\\x(x" into one token. This function stops that from happening 
+    """
+    result = ""
+    
+    for idx, char in enumerate(s):
+        if (char == "\\" or char == "(" or char == ")"):
+            if (idx - 1 >= 0) and (s[idx - 1] != " "):
+                result += " "      
+
+        result += char
+
+        if (char == "\\" or char == "(" or char == ")"):
+            if (idx + 1 < len(s)) and (s[idx + 1] != " "):
+                result += " "
+
+    return result
+
+
 def parse(s) -> list[str]:
     """ 
     converts the string itself into the list of tokens
@@ -151,6 +181,10 @@ def parse(s) -> list[str]:
         if char == ' ' and len(variable) != 0:
             tokens.append(variable)
             variable = ""
+            
+    # add any remaining variable tokens that were parsed 
+    if len(variable) > 0:
+        tokens.append(variable)
     
     return tokens
 
@@ -311,16 +345,18 @@ def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node
 
             exprNode.add_child_node(Node([")"]))
 
-            if not len(subExprNode.elem) == 1: # if the subExpr node contains <expr> that is just 1 <var> we don't continue to explore it (not actually needed to work)
+            # if the subexpression node contains just a var, stop exploring
+            if not len(subExprNode.elem) == 1: 
+                
                 build_parse_tree_rec(tokens[:closingBracketIndex], subExprNode) #Evaluates expr in '('<expr>')'
-
-            tokens = tokens[closingBracketIndex + 1:] # removing all the suff we already parsed  in the above call from what is left to parse
+            
+            # remove anything from tokens that we just parsed
+            tokens = tokens[closingBracketIndex + 1:] 
 
         else: 
             node.add_child_node(Node([token])) # '\' or <var> into child node
-
-
     return node
+
 
 def findClosingBracket(tokens: List[str]) -> int:
 
@@ -353,25 +389,23 @@ if __name__ == "__main__":
 #   BEGIN TESTING OF PARSE TREE
 #   ===========================
     
-    # testTokens1 = ["\\", "x", "(", "x", "za", ")"]
-    # testTokens2 = "(_a_)_(_b_)_(_c_)_(_d_)".split("_")
-    # testTokens3 = ['(', 'a', ')', '(', 'b', ')', '(', '\\', 'x', '(', 'x', 'b', ')', ')', '(', '\\', 'x', '(', 'x', 'yz', ')', ')']
-    # parseTree = build_parse_tree(testTokens3)
-    # parseTree.print_tree()
+    testTokens1 = ["\\", "x", "(", "x", "za", ")"]
+    testTokens2 = "(_a_)_(_b_)_(_c_)_(_d_)".split("_")
+    testTokens3 = ['(', 'a', ')', '(', 'b', ')', '(', '\\', 'x', '(', 'x', 'b', ')', ')', '(', '\\', 'x', '(', 'x', 'yz', ')', ')']
+    parseTree = build_parse_tree(testTokens3)
+    parseTree.print_tree()
 
 #   ===========================
 #   END TESTING OF PARSE TREE
 #   ===========================
 
 
-    print(parse_tokens("(_a_)_(_b_)_(_c_)_(_d_)"))
+    print("\n\nChecking valid examples...")
+    read_lines_from_txt_check_validity(valid_examples_fp)
+    read_lines_from_txt_output_parse_tree(valid_examples_fp)
 
-    # print("\n\nChecking valid examples...")
-    # read_lines_from_txt_check_validity(valid_examples_fp)
-    # read_lines_from_txt_output_parse_tree(valid_examples_fp)
-
-    # print("Checking invalid examples...")
-    # read_lines_from_txt_check_validity(invalid_examples_fp)
+    print("Checking invalid examples...")
+    read_lines_from_txt_check_validity(invalid_examples_fp)
 
     # # Optional
     # print("\n\nAssociation Examples:")
