@@ -31,10 +31,13 @@ def is_valid_var_name(s: str) -> bool:
     """
 
     if not alphabet_chars.__contains__(s[0]):
+        print(f"SYNTAX ERROR: variables must start with a letter")
+
         return False
     
     for char in s:
         if not var_chars.__contains__(char):
+            print(f"SYNTAX ERROR: variables cannot contain the character '{char}'")
             return False
 
     return True
@@ -98,18 +101,22 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
     
     # make sure any dot operators happen AFTER a lambda expression
     dot_op = False
-    for char in s[::-1]:  # iter from right --> left
+    for idx,char in enumerate(s[::-1]):  # iter from right --> left
         if char == '.':
             dot_op = True
+            if idx-1 >= 0 and not alphabet_chars.__contains__(s[idx-1::-1]):
+                print(f"SYNTAX ERROR: must have a variable before a dot operator (index {idx})")
+                return False
         if char == '\\':
             dot_op = False
     if dot_op == True:
+        print(f"SYNTAX ERROR: dot operators must occur AFTER a lambda expression")
         return False
             
     
     s = convert_dot_to_brackets(s_) 
     
-    if valid_brackets(s_) == False:
+    if not valid_brackets(s_):
         return False
     
     
@@ -219,16 +226,18 @@ def valid_lambda_expr(s) -> bool:
     for idx, char in enumerate(s):
         if char == '\\':
             in_lambda_expr = True
+            # spaces or brackets not allowed immediately after a slash
+            if idx+1 < len(s) and (s[idx+1] == ' ' or s[idx+1] == '('):
+                print(f"SYNTAX ERROR: spaces or brackets not allowed immediately after a lambda (index {idx})")
+                return False    
         
         if char == ' ':
-            # make sure there's something else after the space
-
-            if alphabet_chars.__contains__(s[idx+1]):
+            # make sure there's another expression after the lambda token
+            if all_valid_chars.__contains__(s[idx+1]):
                 in_lambda_expr = False
             
         
-        
-    return in_lambda_expr == False
+    return not in_lambda_expr
 
     
 def valid_brackets(s: str) -> bool:    
@@ -237,16 +246,25 @@ def valid_brackets(s: str) -> bool:
     :param s_: the input string
     """
     bracket_count = 0
-    for char in s:
+    for (idx,char) in enumerate(s):
         if char == '(':
             bracket_count += 1
+            
+            if idx + 1 < len(s) and s[idx+1] != '(':
+                next_char = s[idx+1]
+                # expression missing from the brackets
+                if next_char == ' ' or next_char == ')':
+                    print(f"SYNTAX ERROR: expression missing inside brackets (index {idx})")
+                    return False
+            
         if char == ')':
             bracket_count -= 1
         
         # bracket count can only be negative if a close bracket
         # appears before an opening
         if bracket_count < 0:
-            return False
+            print(f"SYNTAX ERROR: brackets are mismatched.")
+
 
     return bracket_count == 0
 
@@ -272,6 +290,8 @@ def read_lines_from_txt_check_validity(fp: [str, os.PathLike]) -> None:
             print(f"The tokenized string for input string {l} is {'_'.join(tokens)}")
     if len(valid_lines) == len(lines):
         print(f"All lines are valid")
+    else:
+        print(f"{len(valid_lines)} of {len(lines)} lines were correct")
 
 def read_lines_from_txt_output_parse_tree(fp: [str, os.PathLike]) -> None:
     """
