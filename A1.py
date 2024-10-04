@@ -104,15 +104,19 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
     for idx,char in enumerate(s[::-1]):  # iter from right --> left
         if char == '.':
             dot_op = True
-            if idx-1 >= 0 and not alphabet_chars.__contains__(s[idx-1::-1]):
-                print(f"SYNTAX ERROR: must have a variable before a dot operator (index {idx})")
-                return False
         if char == '\\':
             dot_op = False
     if dot_op == True:
         print(f"SYNTAX ERROR: dot operators must occur AFTER a lambda expression")
         return False
             
+    # makes sure that if there is a dot operator, it has a variable beside it
+    reversed_str = s[::-1]
+    for (idx, char) in enumerate(reversed_str):
+        if char == ".":
+            if idx + 1 < len(s) and not var_chars.__contains__(reversed_str[idx+1]):
+                print("SYNTAX ERROR: need a variable before a dot operator.")
+                return False
     
     s = convert_dot_to_brackets(s_) 
     
