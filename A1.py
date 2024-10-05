@@ -445,7 +445,7 @@ def add_associativity(s_: List[str], association_type: str = "left") -> List[str
 
 
 
-def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None, isInnerExpression: bool = False) -> Node:
+def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node:
     """
 
     Example Input: ["\\", "x", "(", "x", "za", ")"]
@@ -465,6 +465,8 @@ def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None, isInner
     """
     if node is None: 
         node = Node(tokens[:]) # Create root node
+
+    isInnerExpression = False
 
     while tokens:
 
@@ -545,7 +547,7 @@ def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None, isInner
 
            
             if not len(innerInnerExprNode.elem) == 1:  # if the subexpression node contains just a var, stop exploring
-                build_parse_tree_rec(tokens[:closingBracketIndex], innerInnerExprNode, isInnerExpression = True) #Evaluates expr in '('<expr>')'
+                build_parse_tree_rec(tokens[:closingBracketIndex], innerInnerExprNode) #Evaluates expr in '('<expr>')'
             
             tokens = tokens[closingBracketIndex + 1:] # remove tokens we've parsed
 
@@ -598,10 +600,10 @@ if __name__ == "__main__":
     # testTokens6 = ['a', '\\', 'x', '(', 'x', 'b', ')']
     # testTokens7 = ['a', 'a', '\\', 'ab', 'ab', '\\', 'x', '(', 'x', '\\', 'x', '(', 'x', 'y', ')', ')', 'a', 'b']
     # testTokens8 = ['a', '\\', 'x', '\\', 'y', '\\', 'z', '(', 'x', 'y', ')', 'a']
-    #testTokens8 = "\\_x_(_x_(_b_c_)_)".split("_")
+    # testTokens8 = "\\_x_(_x_(_b_c_)_)".split("_")
     # testTokens9 = ['\\', '(', 'x', 'z', ')']
 
-    # parseTree = build_parse_tree(testTokens9)
+    # parseTree = build_parse_tree(testTokens1)
     # parseTree.print_tree()
 
 
@@ -617,7 +619,7 @@ if __name__ == "__main__":
     print("Checking invalid examples...")
     read_lines_from_txt_check_validity(invalid_examples_fp)
 
-    # # Optional
+    # Optional
     print("\n\nAssociation Examples:")
     sample = ["a", "b", "c"]
     print("Right association")
