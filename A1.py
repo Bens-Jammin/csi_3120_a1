@@ -102,20 +102,20 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
         print(msg)
         return False
     
-    if association_type == "right":
-        s = s[::-1]
-        tokens = parse_expr(s)
-        return tokens[::-1]
-    else: 
-        return parse_expr(s)
+    show_ambiguity = association_type is not None
     
+    if association_type == "right":
+        tokens = parse_expr(s, show_ambiguity)[::-1]
+        return mirror_brackets(tokens)
+    else:
+        return parse_expr(s, show_ambiguity)
 
 #   ======================
 #   BEGIN CUSTOM FUNCTIONS
 #   ======================
 
 
-def parse_expr(s: str) -> list[str]:
+def parse_expr(s: str, show_ambiguity: bool = False) -> list[str]:
     """ 
     converts the string itself into the list of tokens
     """
@@ -124,6 +124,8 @@ def parse_expr(s: str) -> list[str]:
     s = s.strip()
     tokens = []
     
+    if show_ambiguity: tokens.append("(")
+
     # case 1 : <expr> ::= '(' <expr> ')'
     # case 2 : <expr> ::= '\' <var> <expr> 
     if s[0] == '\\':
@@ -134,12 +136,12 @@ def parse_expr(s: str) -> list[str]:
         expr_str = s[var_end_idx+1:]
         tokens.extend("\\")
         tokens.extend(var_str)
-        tokens.extend(parse_expr(expr_str))
+        tokens.extend(parse_expr(expr_str, show_ambiguity))
     # checks if this is either the only bracketed expr OR theres nested brackets
     elif (s[0] == '(' and ") " not in s) or (s.__contains__('(') and s.__contains__(')') and valid_syntax(s[1:-1])[0] ):
         closing_bracket_idx = find_closing_bracket(s)
         tokens.extend('(')
-        tokens.extend( parse_expr(s[1:closing_bracket_idx]) )
+        tokens.extend( parse_expr(s[1:closing_bracket_idx], show_ambiguity) )
         tokens.extend(')')
     # case 3 : <expr> ::= <var>
     elif len(s.split(' ')) > 1:
@@ -155,10 +157,8 @@ def parse_expr(s: str) -> list[str]:
         else:
             expr1 = (s.split(" ", 1))[0]
             expr2 = (s.split(" ", 1))[1]
-            tokens.extend( parse_expr(expr1) )
-            tokens.extend( parse_expr(expr2) )
-    
-        
+            tokens.extend( parse_expr(expr1, show_ambiguity) )
+            tokens.extend( parse_expr(expr2, show_ambiguity) )   
     # case 4 : <expr> ::= <expr> <expr>
     elif alphabet_chars.__contains__(s[0]):
         # 'extend' takes an iterable as the argument, so if you give it a whole string,
@@ -166,8 +166,30 @@ def parse_expr(s: str) -> list[str]:
         # by giving it a list of a string, it just puts the whole string in as one object
         tokens.extend([s])
 
+
+    if show_ambiguity: tokens.append(")")
+    
     return tokens
 
+
+def mirror_brackets(s: list[str]) -> list[str]:
+    '''
+    right associativity is done by flipping the expression, evaluating it as a
+    left-associated tree, then reflipping it. Because of the way the brackets are added
+    (done for left-associated parsing), the brackets need to be "mirrored" 
+    (i.e. opening becomes closed, closed becomes opening) for a right associated parse
+    to look correct  
+    '''
+    r = []
+    for char in s:
+        if char == "(":
+            r.append(")")
+        elif char == ")":
+            r.append("(")
+        else:
+            r.append(char) 
+    return r
+    
 
 def add_correct_spacing(s: str) -> str:
     """
@@ -410,7 +432,14 @@ def add_associativity(s_: List[str], association_type: str = "left") -> List[str
 
     # TODO Optional
     s = s_[:]  # Don't modify original string
-    return []
+    
+    if association_type == "right":
+        s = s[::-1]
+        s = " ".join(s)
+    else:
+        s = " ".join(s)
+    
+    return parse_tokens(s, association_type)
 
 
 
