@@ -103,70 +103,94 @@ def parse_tokens(s_: str, association_type: Optional[str] = None) -> Union[List[
         print(msg)
         return False
     
-    return parse_expr(s)
+    show_ambiguity = association_type is not None
     
+    if association_type == "right":
+        tokens = parse_expr(s, show_ambiguity)[::-1]
+        return mirror_brackets(tokens)
+    else:
+        return parse_expr(s, show_ambiguity)
 
 #   ======================
 #   BEGIN CUSTOM FUNCTIONS
 #   ======================
 
-def valid_syntax(s: str) -> tuple[bool, str]:
+
+def parse_expr(s: str, show_ambiguity: bool = False) -> list[str]:
+    """ 
+    converts the string itself into the list of tokens
+    """
+    # some cases where there would be " <expr>", which makes
+    # the program think theres two exprs
+    s = s.strip()
+    tokens = []
     
-    (valid, err_msg) = valid_dot_op(s)
-    if not valid:
-        return (False, err_msg)
-    
-    modified_s = convert_dot_to_brackets(s) 
-    
-    (valid, err_msg) = valid_brackets(s)
-    if not valid:
-        return (False, err_msg)
-    
-    modidifed_s = modified_s.replace("_", " ")
-    modidifed_s = modified_s.replace("  ", " ")
-    modidifed_s = add_correct_spacing(modified_s)
-    
-    # next make sure any variables are valid
-    for potential_var in s.split(' '):
-        if ("(" in potential_var) or (")" in potential_var) or ("." in potential_var) or ("\\" in potential_var):
-            continue
-       
-        # sometimes if you split between two spaces, it adds an empty string into the split
-        if potential_var == "":
-            continue
-            
-        (valid, err_msg) = is_valid_var_name(potential_var)
-        if not valid:
-            return (False, err_msg)
-        
-    # make sure lambda expressions are valid
-    (valid, err_msg) = valid_lambda_expr(s)
-    if not valid:
-        return (False, err_msg)
-    
-    return (True, "")
+    if show_ambiguity: tokens.append("(")
+
+    # case 1 : <expr> ::= '(' <expr> ')'
+    # case 2 : <expr> ::= '\' <var> <expr> 
+    if s[0] == '\\':
+        var_end_idx = end_idx_of_var(s[1:]);
+        # note: array indexing has an inclusive start
+        # but an exclusive end
+        var_str =  s[1:var_end_idx+1]
+        expr_str = s[var_end_idx+1:]
+        tokens.extend("\\")
+        tokens.extend(var_str)
+        tokens.extend(parse_expr(expr_str, show_ambiguity))
+    # checks if this is either the only bracketed expr OR theres nested brackets
+    elif (s[0] == '(' and ") " not in s) or (s.__contains__('(') and s.__contains__(')') and valid_syntax(s[1:-1])[0] ):
+        closing_bracket_idx = find_closing_bracket(s)
+        tokens.extend('(')
+        tokens.extend( parse_expr(s[1:closing_bracket_idx], show_ambiguity) )
+        tokens.extend(')')
+    # case 3 : <expr> ::= <var>
+    elif len(s.split(' ')) > 1:
+        # if this expression is two '(<expr>)'s
+        # split at the end of the first bracket expr
+        if s[0] == '(' and s[-1] == ')':
+            # re-add end bracket because the split() method
+            # excludes the bracket for `expr1`
+            expr1 = (s.split(") ", 1))[0] + ")"
+            expr2 = (s.split(") ", 1))[1]
+            tokens.extend( parse_expr(expr1) )
+            tokens.extend( parse_expr(expr2) )
+        else:
+            expr1 = (s.split(" ", 1))[0]
+            expr2 = (s.split(" ", 1))[1]
+            tokens.extend( parse_expr(expr1, show_ambiguity) )
+            tokens.extend( parse_expr(expr2, show_ambiguity) )   
+    # case 4 : <expr> ::= <expr> <expr>
+    elif alphabet_chars.__contains__(s[0]):
+        # 'extend' takes an iterable as the argument, so if you give it a whole string,
+        # itll split the string into its characters.
+        # by giving it a list of a string, it just puts the whole string in as one object
+        tokens.extend([s])
 
 
-def valid_dot_op(s: str) -> tuple[bool, str]:   
-    # make sure any dot operators happen AFTER a lambda expression
-    dot_op = False
-    for idx,char in enumerate(s[::-1]):  # iter from right --> left
-        if char == '.':
-            dot_op = True
-        if char == '\\':
-            dot_op = False
-    if dot_op == True:
-        return (False, f"SYNTAX ERROR: dot operators must occur AFTER a lambda expression")
-            
-    # makes sure that if there is a dot operator, it has a variable beside it   x
-    reversed_str = s[::-1]
-    for (idx, char) in enumerate(reversed_str):
-        if char == ".":
-            if idx + 1 <= len(s) and not var_chars.__contains__(reversed_str[idx+1]):
-                return (False, "SYNTAX ERROR: need a variable before a dot operator.")
-                
-    return (True, "")
+    if show_ambiguity: tokens.append(")")
+    
+    return tokens
 
+
+def mirror_brackets(s: list[str]) -> list[str]:
+    '''
+    right associativity is done by flipping the expression, evaluating it as a
+    left-associated tree, then reflipping it. Because of the way the brackets are added
+    (done for left-associated parsing), the brackets need to be "mirrored" 
+    (i.e. opening becomes closed, closed becomes opening) for a right associated parse
+    to look correct  
+    '''
+    r = []
+    for char in s:
+        if char == "(":
+            r.append(")")
+        elif char == ")":
+            r.append("(")
+        else:
+            r.append(char) 
+    return r
+    
 
 def add_correct_spacing(s: str) -> str:
     """
@@ -190,58 +214,6 @@ def add_correct_spacing(s: str) -> str:
     return result
 
 
-def parse_expr(s: str) -> list[str]:
-    """ 
-    converts the string itself into the list of tokens
-    """
-    # some cases where there would be " <expr>", which makes
-    # the program think theres two exprs
-    s = s.strip()
-    tokens = []
-    
-    # case 1 : <expr> ::= '(' <expr> ')'
-    # case 2 : <expr> ::= '\' <var> <expr> 
-    if s[0] == '\\':
-        var_end_idx = end_idx_of_var(s[1:]);
-        var_str =  s[1:var_end_idx+1]
-        expr_str = s[var_end_idx+1:]
-        tokens.extend("\\")
-        tokens.extend(var_str)
-        tokens.extend(parse_expr(expr_str))
-    # checks if this is either the only bracketed expr OR theres nested brackets
-    elif (s[0] == '(' and ") " not in s) or (s.__contains__('(') and s.__contains__(')') and valid_syntax(s[1:-1])[0] ):
-        closing_bracket_idx = find_closing_bracket(s)
-        tokens.extend('(')
-        tokens.extend( parse_expr(s[1:closing_bracket_idx]) )
-        tokens.extend(')')
-    # case 3 : <expr> ::= <var>
-    elif len(s.split(' ')) > 1:
-        # if this expression is two '(<expr>)'s
-        # split at the end of the first bracket expr
-        if s[0] == '(' and s[-1] == ')':
-            # readd end bracket because the split() method
-            # excludes the bracket for expr1
-            expr1 = (s.split(") ", 1))[0] + ")"
-            expr2 = (s.split(") ", 1))[1]
-            tokens.extend( parse_expr(expr1) )
-            tokens.extend( parse_expr(expr2) )
-        else:
-            expr1 = (s.split(" ", 1))[0]
-            expr2 = (s.split(" ", 1))[1]
-            tokens.extend( parse_expr(expr1) )
-            tokens.extend( parse_expr(expr2) )
-    
-        
-    # case 4 : <expr> ::= <expr> <expr>
-    elif alphabet_chars.__contains__(s[0]):
-        # extend takes an iterable, so if you give it a whole string,
-        # itll split the string into its characters.
-        # by giving it a list of a string, it just puts the whole string in as one object
-        tokens.extend([s])
-
-    return tokens
-
-
 def end_idx_of_var(s) -> int:
     '''
     given a string s where a variable starts at index 0,
@@ -255,20 +227,23 @@ def end_idx_of_var(s) -> int:
             return idx
     
     return len(s)
-    
-    
+      
 
 def find_closing_bracket(s) -> int:
+    '''
+    given a string with an opening bracket at index 0,
+    returns the index of the associated closing bracket
+    '''
     bracket_number = 0
     for idx, char in enumerate(s):
         if char == '(':
             bracket_number += 1
         elif char == ')':
             bracket_number -= 1
-        
         if bracket_number == 0: 
             return idx
     return -1
+
 
 def convert_dot_to_brackets(s: str) -> str:
     """ 
@@ -280,6 +255,7 @@ def convert_dot_to_brackets(s: str) -> str:
     
     modified_string = ""
     
+    # looping over s backwards
     for char in s:
         if char == '.':
             modified_string = ''.join((')', modified_string))
@@ -346,6 +322,64 @@ def valid_brackets(s: str) -> tuple[bool, str]:
     return (True, "")
 
 
+def valid_syntax(s: str) -> tuple[bool, str]:
+    
+    (valid, err_msg) = valid_dot_op(s)
+    if not valid:
+        return (False, err_msg)
+    
+    modified_s = convert_dot_to_brackets(s) 
+    
+    (valid, err_msg) = valid_brackets(s)
+    if not valid:
+        return (False, err_msg)
+   
+    # standardize the string to make it easier to parse 
+    modidifed_s = modified_s.replace("_", " ")
+    modidifed_s = modified_s.replace("  ", " ")
+    modidifed_s = add_correct_spacing(modified_s)
+    
+    # next make sure any variables are valid
+    for potential_var in s.split(' '):
+        if ("(" in potential_var) or (")" in potential_var) or ("." in potential_var) or ("\\" in potential_var):
+            continue
+       
+        # sometimes if you split between two spaces, it adds an empty string into the split
+        if potential_var == "":
+            continue
+            
+        (valid, err_msg) = is_valid_var_name(potential_var)
+        if not valid:
+            return (False, err_msg)
+        
+    # make sure lambda expressions are valid
+    (valid, err_msg) = valid_lambda_expr(s)
+    if not valid:
+        return (False, err_msg)
+    
+    return (True, "")
+
+
+def valid_dot_op(s: str) -> tuple[bool, str]:   
+    # make sure any dot operators happen AFTER a lambda expression
+    dot_op = False
+    for idx,char in enumerate(s[::-1]):  # iter from right --> left
+        if char == '.':
+            dot_op = True
+        if char == '\\':
+            dot_op = False
+    if dot_op == True:
+        return (False, f"SYNTAX ERROR: dot operators must occur AFTER a lambda expression")
+            
+    # makes sure that if there is a dot operator, it has a variable beside it   x
+    reversed_str = s[::-1]
+    for (idx, char) in enumerate(reversed_str):
+        if char == ".":
+            if idx + 1 <= len(s) and not var_chars.__contains__(reversed_str[idx+1]):
+                return (False, "SYNTAX ERROR: need a variable before a dot operator.")
+                
+    return (True, "")
+
 
 #   ====================
 #   END CUSTOM FUNCTIONS
@@ -399,7 +433,14 @@ def add_associativity(s_: List[str], association_type: str = "left") -> List[str
 
     # TODO Optional
     s = s_[:]  # Don't modify original string
-    return []
+    
+    if association_type == "right":
+        s = s[::-1]
+        s = " ".join(s)
+    else:
+        s = " ".join(s)
+    
+    return parse_tokens(s, association_type)
 
 
 
@@ -577,11 +618,11 @@ if __name__ == "__main__":
     read_lines_from_txt_check_validity(invalid_examples_fp)
 
     # # Optional
-    # print("\n\nAssociation Examples:")
-    # sample = ["a", "b", "c"]
-    # print("Right association")
-    # associated_sample_r = add_associativity(sample, association_type="right")
-    # print(associated_sample_r)
-    # print("Left association")
-    # associated_sample_l = add_associativity(sample, association_type="left")
-    # print(associated_sample_l)
+    print("\n\nAssociation Examples:")
+    sample = ["a", "b", "c"]
+    print("Right association")
+    associated_sample_r = add_associativity(sample, association_type="right")
+    print(associated_sample_r)
+    print("Left association")
+    associated_sample_l = add_associativity(sample, association_type="left")
+    print(associated_sample_l)
