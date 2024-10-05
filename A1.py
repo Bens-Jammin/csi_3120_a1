@@ -9,6 +9,7 @@ var_chars = alphabet_chars + numeric_chars
 all_valid_chars = var_chars + ["(", ")", ".", "\\"]
 valid_examples_fp = "./valid_examples.txt"
 invalid_examples_fp = "./invalid_examples.txt"
+extra_valid_example_fp = "./extra_valid_examples.txt"
 
 
 def read_lines_from_txt(fp: list[str, os.PathLike]) -> List[str]:
@@ -67,7 +68,7 @@ class ParseTree:
     def __init__(self, root):
         self.root = root
 
-    def print_tree(self, node: Optional[Node] = None, level: int = 0) -> None: #Using preorder traversal
+    def print_tree(self, node: Optional[Node] = None, level: int = 0) -> None: 
         # TODO COMPLETE
 
         if node is None: 
@@ -403,7 +404,7 @@ def add_associativity(s_: List[str], association_type: str = "left") -> List[str
 
 
 
-def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node:
+def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None, isInnerExpression: bool = False) -> Node:
     """
 
     Example Input: ["\\", "x", "(", "x", "za", ")"]
@@ -425,56 +426,96 @@ def build_parse_tree_rec(tokens: List[str], node: Optional[Node] = None) -> Node
         node = Node(tokens[:]) # Create root node
 
     while tokens:
+
         token = tokens.pop(0)
 
-        if token == "\\": # in case of '\' <var> <expr>
-            if tokens[1] is is_valid_var_name: 
-                exprTokens = ["\\"] + tokens[:2] # <expr> tokens
-                #TODO
+        if isInnerExpression and token == '\\':  # in case of '\' <var> <expr> sub expression
+          
+            if is_valid_var_name(tokens[1])[0]: 
+                innerExprTokens = [token, tokens.pop(0), tokens.pop(0)] # Getting '\' <var> <var>
+                innerExprNode = Node(innerExprTokens[:])
+                node.add_child_node(innerExprNode)
+                build_parse_tree_rec(innerExprTokens, innerExprNode)
 
-
-            if tokens[1] == "\\":
-                build_parse_tree_rec(tokens[1:]) #Recurce the sub expression
-                #TODO Find sub expression
-
-            if tokens[1] == "(": 
-                exprTokens = ["\\"] + tokens[2:closingBracketIndex] #expr tokens tokens
-                exprNode = Node(exprTokens)
-                node.add_child_node(exprNode)
                 
 
+            elif tokens[1] == "\\":
+                innerExprTokens = [token]
+                while True:
+                    innerExprTokens.append(tokens.pop(0)) #To capture an expr that looks like '\' 'x' '\' 'y' '\' 'z'...
+                    innerExprTokens.append(tokens.pop(0))
+                    innerExprTokens.append(tokens.pop(0))
+                    token = tokens.pop(0)
+
+                    if token == '\\' and tokens[1] == '\\': 
+                        innerExprTokens.append(token)
+                        continue
+
+                    elif token == '\\' and not tokens[1] == '\\': 
+                        innerExprTokens.append(token)
+                        innerExprTokens.append(tokens.pop(0))
+                        token = tokens.pop(0)
+                        innerExprTokens.append(token)
+                        break
+
+                    else: 
+                        innerExprTokens.append(token)
+                        break
+
+                if token == '(': 
+                    closingBracketIndex = findClosingBracket(tokens)
+                    innerExprTokens += tokens[:closingBracketIndex + 1]
+                    tokens = tokens[closingBracketIndex + 1:]
+
+                innerExprNode = Node(innerExprTokens[:])
+                node.add_child_node(innerExprNode)
+                build_parse_tree_rec(innerExprTokens, innerExprNode)
 
 
-        if token == "(": 
+
+            else:
+                closingBracketIndex = findClosingBracket(tokens[2:]) + 2
+                innerExprTokens = [token] + tokens[:closingBracketIndex + 1] # \ <var> '(' <expr> ')'
+                innerExprNode = Node(innerExprTokens[:])
+
+                node.add_child_node(innerExprNode)
+
+                tokens = tokens[closingBracketIndex + 1:]  # removeing the inner expression we're about to parse
+
+                build_parse_tree_rec(innerExprTokens, innerExprNode) # building parse tree on \ <var> '(' <expr> ')' treeting it as an <expr>
+
+
+
+        elif token == "(": 
 
             closingBracketIndex = findClosingBracket(tokens)
 
-            exprTokens = ["("] + tokens[:closingBracketIndex + 1] # getting '(' <expr> ')'
+            innerExprTokens = [token] + tokens[:closingBracketIndex + 1] # getting '(' <expr> ')'
 
-            exprNode = Node(exprTokens)
-            node.add_child_node(exprNode)
+            innerExprNode = Node(innerExprTokens)
+            node.add_child_node(innerExprNode)
 
-            exprNode.add_child_node(Node(["("]))
+            innerExprNode.add_child_node(Node(["("]))
 
-            subExprNode = Node(exprTokens[1:-1])
-            exprNode.add_child_node(subExprNode)
+            innerInnerExprNode = Node(innerExprTokens[1:-1])
+            innerExprNode.add_child_node(innerInnerExprNode)
 
-            exprNode.add_child_node(Node([")"]))
+            innerExprNode.add_child_node(Node([")"]))
 
-            # if the subexpression node contains just a var, stop exploring
-            if not len(subExprNode.elem) == 1: 
-                
-                build_parse_tree_rec(tokens[:closingBracketIndex], subExprNode) #Evaluates expr in '('<expr>')'
+           
+            if not len(innerInnerExprNode.elem) == 1:  # if the subexpression node contains just a var, stop exploring
+                build_parse_tree_rec(tokens[:closingBracketIndex], innerInnerExprNode, isInnerExpression = True) #Evaluates expr in '('<expr>')'
             
-            # remove anything from tokens that we just parsed
-            tokens = tokens[closingBracketIndex + 1:] 
+            tokens = tokens[closingBracketIndex + 1:] # remove tokens we've parsed
 
         else: 
-            node.add_child_node(Node([token])) # '\' or <var> into child node
+            node.add_child_node(Node([token]))
+
+        isInnerExpression = True
+
     return node
 
 #<expr> ::= <var> | '(' <expr> ')' | '\' <var> <expr> | <expr> <expr> 
-def evalExpr (tokens: List[str]):
 
 
 def findClosingBracket(tokens: List[str]) -> int:
@@ -508,10 +549,18 @@ if __name__ == "__main__":
 #   BEGIN TESTING OF PARSE TREE
 #   ===========================
     
-    testTokens1 = ["\\", "x", "(", "x", "za", ")"]
-    testTokens2 = "(_a_)_(_b_)_(_c_)_(_d_)".split("_")
-    testTokens3 = ['(', 'a', ')', '(', 'b', ')', '(', '\\', 'x', '(', 'x', 'b', ')', ')', '(', '\\', 'x', '(', 'x', 'yz', ')', ')']
-    parseTree = build_parse_tree(testTokens3)
+    # testTokens1 = ["\\", "x", "(", "x", "za", ")"]
+    # testTokens2 = "(_a_)_(_b_)_(_c_)_(_d_)".split("_")
+    # testTokens3 = ['(', 'a', ')', '(', 'b', ')', '(', '\\', 'x', '(', 'x', 'b', ')', ')', '(', '\\', 'x', '(', 'x', 'yz', ')', ')']
+    # testTokens4 = ['a','a', '\\', 'x', '(', 'x', 'b', ')', '(', 'a', 'b', ')', 'ab']
+    # testTokens5 = ['a', 'a', '\\', 'ab', 'ab', '\\', 'x', '(', 'x', 'y', ')', 'a', 'b']
+    # testTokens6 = ['a', '\\', 'x', '(', 'x', 'b', ')']
+    # testTokens7 = ['a', 'a', '\\', 'ab', 'ab', '\\', 'x', '(', 'x', '\\', 'x', '(', 'x', 'y', ')', ')', 'a', 'b']
+    # testTokens8 = ['a', '\\', 'x', '\\', 'y', '\\', 'z', '(', 'x', 'y', ')', 'a']
+    #testTokens8 = "\\_x_(_x_(_b_c_)_)".split("_")
+    # testTokens9 = ['\\', '(', 'x', 'z', ')']
+
+    # parseTree = build_parse_tree(testTokens9)
     # parseTree.print_tree()
 
 
@@ -520,12 +569,12 @@ if __name__ == "__main__":
 #   ===========================
 
 
-    # print("\n\nChecking valid examples...")
-    # read_lines_from_txt_check_validity(valid_examples_fp)
-    # read_lines_from_txt_output_parse_tree(valid_examples_fp)
+    print("\n\nChecking valid examples...")
+    read_lines_from_txt_check_validity(valid_examples_fp)
+    read_lines_from_txt_output_parse_tree(valid_examples_fp)
 
-    # print("Checking invalid examples...")
-    # read_lines_from_txt_check_validity(invalid_examples_fp)
+    print("Checking invalid examples...")
+    read_lines_from_txt_check_validity(invalid_examples_fp)
 
     # # Optional
     # print("\n\nAssociation Examples:")
